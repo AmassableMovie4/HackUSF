@@ -7,6 +7,7 @@ import torchvision.models as torchvision_models  # Renamed to avoid conflict
 from collections import Counter
 import json
 import warnings
+import argparse
 warnings.filterwarnings("ignore", category=UserWarning)
 
 # Define class names and info
@@ -231,38 +232,45 @@ def predict(image_path, loaded_models, device):
 
 def main():
     """Main function to run the script"""
-    import argparse
-    
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description='Skin Lesion Classification')
-    parser.add_argument('--image', type=str, help='Path to the image file (default: auto-detect melanoma.jpeg)')
+    parser = argparse.ArgumentParser(description='Please Input the Name of your File: ')
+    parser.add_argument('-f', '--file', help='Path to input file')
     parser.add_argument('--models', type=str, help='Path to the models directory (default: auto-detect)')
     args = parser.parse_args()
     
     # Get the directory where this script is located
     script_dir = os.path.dirname(os.path.abspath(__file__))
     
-    # Define paths relative to the script location
+    # Define models directory path
     models_dir = args.models if args.models else os.environ.get("MODELS_DIR", os.path.join(script_dir, "models"))
-    image_path = args.image if args.image else os.path.join(script_dir, "melanoma.jpeg")
     
+    # Process the file argument
+    if args.file:
+        print(f'Processing file: {args.file}')
+        image_path = args.file
+    else:
+        print('File not specified')
+        # Default image path if file not specified
+        image_path = os.path.join(script_dir, "melanoma.jpeg")
+        
+    print(f"Processing image: {image_path}")
     print(f"Script directory: {script_dir}")
-    print(f"Looking for image at: {image_path}")
     print(f"Looking for models in: {models_dir}")
     
     # Check if image exists
     if not os.path.exists(image_path):
         # Try to find the image in the parent directory structure
-        print("Image not found at the expected location. Searching for melanoma.jpeg...")
+        print("Image not found at the expected location. Searching...")
         for root, dirs, files in os.walk(os.path.dirname(script_dir)):
-            if "melanoma.jpeg" in files:
-                image_path = os.path.join(root, "melanoma.jpeg")
+            image_filename = os.path.basename(image_path)
+            if image_filename in files:
+                image_path = os.path.join(root, image_filename)
                 print(f"Found image at: {image_path}")
                 break
         
         # If still not found
         if not os.path.exists(image_path):
-            print("Error: Could not find melanoma.jpeg anywhere!")
+            print(f"Error: Could not find image {image_path} anywhere!")
             return
     
     # Load models and make prediction
@@ -293,9 +301,10 @@ def main():
         print(f"  - {CLASS_INFO[class_name]['display']}: {prob * 100:.2f}%")
     
     # Save results to JSON file
-    with open("prediction_result.json", "w") as f:
+    output_filename = f"{os.path.splitext(os.path.basename(image_path))[0]}_prediction.json"
+    with open(output_filename, "w") as f:
         json.dump(result, f, indent=4)
-    print("\nResults also saved to prediction_result.json")
+    print(f"\nResults also saved to {output_filename}")
 
 if __name__ == "__main__":
     main()
